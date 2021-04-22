@@ -17,7 +17,6 @@
 #include <SPI.h>
 
 #include <OSCBundle.h>
-#include <OSCBoards.h>
 
 #define ledLatch 8
 #define ledData 11
@@ -43,7 +42,15 @@ boolean oscEnabled = false;
 
 float lastTbarValue = 0;
 
+void initOsc();
+void shift(uint8_t b);
+void route(OSCBundle &bundle);
+void sendMessage(OSCMessage &msg);
+void routeProgram(OSCMessage &msg, int addrOffset);
+uint8_t getFromBits(const boolean arrayA[], const boolean arrayB[], int start);
+
 void setup() {
+    //Serial.begin(9600);
     pinMode(ledLatch, OUTPUT);
     pinMode(ledClock, OUTPUT);
     pinMode(ledData, OUTPUT);
@@ -62,19 +69,14 @@ void setup() {
 
 void loop() {
     if(oscEnabled) {
-        /*
         OSCBundle bundleIn;
         int size;
         if((size = udp.parsePacket()) > 0) {
-          while(size--) {
-            bundleIn.fill(udp.read());
-          }
-          if(!bundleIn.hasError()) {
-            // Add routes here
-            bundleIn.route("/atem/program", routeProgram);
-          }
+            while(size--) {
+                bundleIn.fill(udp.read());
+            }
+            route(bundleIn);
         }
-        */
         float tbar = ((int32_t)analogRead(transitionBar)) / 1023.0;
         if(tbar != lastTbarValue) {
             lastTbarValue = tbar;
@@ -106,7 +108,20 @@ void sendMessage(OSCMessage &msg) {
  * OSC Routes
  */
 void routeProgram(OSCMessage &msg, int addrOffset) {
+    if(msg.fullMatch("/atem/program", 0)) {
+        //Serial.println(msg.getInt(0));
+    }
+}
 
+void routePreview(OSCMessage &msg, int addrOffset) {
+    if(msg.fullMatch("/atem/preview", 0)) {
+        //Serial.println(msg.getInt(0));
+    }
+}
+
+void route(OSCBundle &bundle) {
+    bundle.route("/atem/program", routeProgram);
+    bundle.route("/atem/preview", routePreview);
 }
 
 /**
@@ -143,7 +158,7 @@ void shift(uint8_t b) {
     shiftOut(ledData, ledClock, MSBFIRST, b);
 }
 
-uint8_t getFromBits(boolean arrayA[], boolean arrayB[], int start) {
+uint8_t getFromBits(const boolean arrayA[], const boolean arrayB[], int start) {
     byte x = 0b00000000;
     int c = 0;
     for(int i = start; i < start + 4; i++) {
