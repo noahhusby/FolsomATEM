@@ -44,7 +44,6 @@ boolean oscEnabled = false;
 float lastTbarValue = 0;
 
 void setup() {
-  Serial.begin(9600);
   pinMode(ledLatch, OUTPUT);
   pinMode(ledClock, OUTPUT);
   pinMode(ledData, OUTPUT);
@@ -77,7 +76,6 @@ void loop() {
     }
     */
     float tbar = ((int32_t)analogRead(transitionBar)) / 1023.0;
-    Serial.println(tbar);
     if(tbar != lastTbarValue) {
       lastTbarValue = tbar;
       OSCMessage msg("/atem/transition/bar");
