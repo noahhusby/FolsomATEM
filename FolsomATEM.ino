@@ -1,41 +1,33 @@
-#include <SPI.h>
-
+// LED Rows
 boolean previewRow [16] = {false};
 boolean programRow [16] = {false};
 boolean auxRow [16] = {false};
 boolean macrowRow [16] = {false};
 
-// set pin 10 as the slave select for the digital pot:
-
-int enable = 7;
-int latchPin = 8;
+int ledLatch = 8;
+int ledClock = 12;
+int ledData = 11;
 
 void setup() {
-  Serial.begin(9600);
-  pinMode(11, OUTPUT);
-  pinMode(13, OUTPUT);
-pinMode(latchPin, OUTPUT);
-pinMode(enable, OUTPUT);
-pinMode(10, OUTPUT);
-digitalWrite(10, LOW);
-digitalWrite(enable, HIGH);
-digitalWrite(latchPin, LOW);
-delay(500);
-//SPI.beginTransaction(settings);
-digitalWrite(enable, LOW);
+  pinMode(ledLatch, OUTPUT);
+  pinMode(ledClock, OUTPUT);
+  pinMode(ledData, OUTPUT);
+
+  delay(500);
+
+  // Prepare LEDS
+  digitalWrite(ledData, LOW);
+  digitalWrite(ledClock, LOW);
+  digitalWrite(ledLatch, HIGH);
 }
 
-void loop() {
+void loop() { 
   for(int i = 0; i < 16; i++) {
-    programRow[i] = true;
+    setPreviewLeds(i);
     updateLeds();
     delay(100);
   }
-  for(int i = 0; i < 16; i++) {
-    programRow[i] = false;
-    updateLeds();
-    delay(100);
-  }
+  delay(1000);
 }
 
 void setPreviewLeds(int value) {
@@ -53,7 +45,7 @@ void setProgramLeds(int value) {
 }
 
 void updateLeds() {
-  digitalWrite(latchPin, LOW);
+  digitalWrite(ledLatch, LOW);
   shift(getFromBits(programRow, previewRow, 11));
   shift(getFromBits(macrowRow, auxRow, 11));
   shift(getFromBits(programRow, previewRow, 7));
@@ -62,15 +54,14 @@ void updateLeds() {
   shift(getFromBits(macrowRow, auxRow, 3));
   shift(getFromBits(programRow, previewRow, 0));
   shift(getFromBits(macrowRow, auxRow, 0));
-  digitalWrite(latchPin, HIGH);
- 
+  digitalWrite(ledLatch, HIGH);
 }
 
-void shift(byte b) {
-  shiftOut(11, 13, MSBFIRST, b);
+void shift(uint8_t b) {
+  shiftOut(ledData, ledClock, MSBFIRST, b);
 }
 
-byte getFromBits(boolean arrayA[], boolean arrayB[], int start) {
+uint8_t getFromBits(boolean arrayA[], boolean arrayB[], int start) {
   byte x = 0b00000000; 
   int c = 0;
   for(int i = start; i < start + 4; i++) {
