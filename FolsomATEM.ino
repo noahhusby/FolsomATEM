@@ -1,12 +1,29 @@
+#include <Ethernet.h>
+#include <EthernetUdp.h>
+#include <SPI.h>    
+
+#include <OSCBundle.h>
+#include <OSCBoards.h>
+
+#define ledLatch 8
+#define ledData 11
+#define ledClock 12
+
 // LED Rows
 boolean previewRow [16] = {false};
 boolean programRow [16] = {false};
 boolean auxRow [16] = {false};
 boolean macrowRow [16] = {false};
 
-int ledLatch = 8;
-int ledClock = 12;
-int ledData = 11;
+// OSC UDP
+EthernetUDP udp;
+byte mac[] = { 0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED };
+IPAddress controllerIp(192, 168, 1, 81);
+IPAddress computerIp(192, 168, 1, 82);
+const unsigned int inPort = 8888;
+const unsigned int outPort = 3333;
+
+boolean oscEnabled = false;
 
 void setup() {
   pinMode(ledLatch, OUTPUT);
@@ -15,6 +32,8 @@ void setup() {
 
   delay(500);
 
+  //initOsc();
+
   // Prepare LEDS
   digitalWrite(ledData, LOW);
   digitalWrite(ledClock, LOW);
@@ -22,6 +41,19 @@ void setup() {
 }
 
 void loop() { 
+  if(oscEnabled) {
+    OSCBundle bundleIn;
+    int size;
+    if((size = udp.parsePacket()) > 0) {
+      while(size--) {
+        bundleIn.fill(udp.read());
+      }
+      if(!bundleIn.hasError()) {
+        // Add routes here
+        bundleIn.route("/atem/program", routeProgram);
+      }
+    }
+  }
   for(int i = 0; i < 16; i++) {
     setPreviewLeds(i);
     updateLeds();
@@ -30,6 +62,32 @@ void loop() {
   delay(1000);
 }
 
+/**
+ * OSC Methods
+ */
+void initOsc() {
+  Ethernet.begin(mac, controllerIp);
+  udp.begin(inPort);
+  oscEnabled = true;
+}
+
+void sendMessage(OSCMessage msg) {
+  udp.beginPacket(computerIp, outPort);
+  msg.send(udp);
+  udp.endPacket();
+  msg.empty();
+}
+
+/**
+ * OSC Routes
+ */
+void routeProgram(OSCMessage &msg, int addrOffset) {
+  
+}
+
+/**
+ * LED Methods
+ */
 void setPreviewLeds(int value) {
   for(int i = 0; i < 16; i++) {
     previewRow[i] = false;
@@ -56,6 +114,7 @@ void updateLeds() {
   shift(getFromBits(macrowRow, auxRow, 0));
   digitalWrite(ledLatch, HIGH);
 }
+
 
 void shift(uint8_t b) {
   shiftOut(ledData, ledClock, MSBFIRST, b);
