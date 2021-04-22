@@ -41,11 +41,11 @@ const unsigned int outPort = 3333;
 
 boolean oscEnabled = false;
 
-int32_t lastTbarValue = 0;
+float lastTbarValue = 0;
 
 void setup() {
   Serial.begin(9600);
- /pinMode(ledLatch, OUTPUT);
+  pinMode(ledLatch, OUTPUT);
   pinMode(ledClock, OUTPUT);
   pinMode(ledData, OUTPUT);
 
@@ -62,9 +62,6 @@ void setup() {
 }
 
 void loop() { 
-  OSCMessage msg("/atem/transition/bar");
-  msg.add((int32_t)analogRead(0)/1023.0);
-  sendMessage(msg);
   if(oscEnabled) {
     /*
     OSCBundle bundleIn;
@@ -79,10 +76,11 @@ void loop() {
       }
     }
     */
-    int32_t tbar = analogRead(transitionBar) / 1023.0;
+    float tbar = ((int32_t)analogRead(transitionBar)) / 1023.0;
     Serial.println(tbar);
     if(tbar != lastTbarValue) {
       lastTbarValue = tbar;
+      OSCMessage msg("/atem/transition/bar");
       msg.add(tbar);
       sendMessage(msg);
     }
