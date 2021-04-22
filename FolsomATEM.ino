@@ -23,6 +23,8 @@
 #define ledData 11
 #define ledClock 12
 
+#define transitionBar A0
+
 // LED Rows
 boolean previewRow [16] = {false};
 boolean programRow [16] = {false};
@@ -33,20 +35,25 @@ boolean macrowRow [16] = {false};
 EthernetUDP udp;
 byte mac[] = { 0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED };
 IPAddress controllerIp(192, 168, 1, 81);
-IPAddress computerIp(192, 168, 1, 82);
+IPAddress computerIp(192, 168, 1, 238);
 const unsigned int inPort = 8888;
 const unsigned int outPort = 3333;
 
 boolean oscEnabled = false;
 
+int32_t lastTbarValue = 0;
+
 void setup() {
-  pinMode(ledLatch, OUTPUT);
+  Serial.begin(9600);
+ /pinMode(ledLatch, OUTPUT);
   pinMode(ledClock, OUTPUT);
   pinMode(ledData, OUTPUT);
 
+  pinMode(transitionBar, INPUT);
+
   delay(500);
 
-  //initOsc();
+  initOsc();
 
   // Prepare LEDS
   digitalWrite(ledData, LOW);
@@ -55,7 +62,11 @@ void setup() {
 }
 
 void loop() { 
+  OSCMessage msg("/atem/transition/bar");
+  msg.add((int32_t)analogRead(0)/1023.0);
+  sendMessage(msg);
   if(oscEnabled) {
+    /*
     OSCBundle bundleIn;
     int size;
     if((size = udp.parsePacket()) > 0) {
@@ -67,13 +78,16 @@ void loop() {
         bundleIn.route("/atem/program", routeProgram);
       }
     }
+    */
+    int32_t tbar = analogRead(transitionBar) / 1023.0;
+    Serial.println(tbar);
+    if(tbar != lastTbarValue) {
+      lastTbarValue = tbar;
+      msg.add(tbar);
+      sendMessage(msg);
+    }
   }
-  for(int i = 0; i < 16; i++) {
-    setPreviewLeds(i);
-    updateLeds();
-    delay(100);
-  }
-  delay(1000);
+  delay(20);
 }
 
 /**
@@ -85,7 +99,7 @@ void initOsc() {
   oscEnabled = true;
 }
 
-void sendMessage(OSCMessage msg) {
+void sendMessage(OSCMessage &msg) {
   udp.beginPacket(computerIp, outPort);
   msg.send(udp);
   udp.endPacket();
@@ -128,7 +142,6 @@ void updateLeds() {
   shift(getFromBits(macrowRow, auxRow, 0));
   digitalWrite(ledLatch, HIGH);
 }
-
 
 void shift(uint8_t b) {
   shiftOut(ledData, ledClock, MSBFIRST, b);
