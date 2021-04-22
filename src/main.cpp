@@ -40,7 +40,7 @@ const unsigned int outPort = 3333;
 
 boolean oscEnabled = false;
 
-float lastTbarValue = 0;
+double lastTbarValue = 0;
 
 void initOsc();
 void shift(uint8_t b);
@@ -77,12 +77,15 @@ void loop() {
             }
             route(bundleIn);
         }
-        float tbar = ((int32_t)analogRead(transitionBar)) / 1023.0;
+        double tbar = ((int32_t)analogRead(transitionBar)) / 1023.0;
         if(tbar != lastTbarValue) {
             lastTbarValue = tbar;
             OSCMessage msg("/atem/transition/bar");
             msg.add(tbar);
-            sendMessage(msg);
+            udp.beginPacket(computerIp, outPort);
+            msg.send(udp);
+            udp.endPacket();
+            msg.empty();
         }
     }
     delay(20);
